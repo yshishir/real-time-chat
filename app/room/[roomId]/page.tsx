@@ -22,7 +22,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
               <button
                 type="button"
                 aria-label="Copy room code"
-                className="flex items-center gap-2 rounded bg-[#242424] px-3 py-2 text-xs font-medium text-[#aaa]"
+                className=" cursor-pointer flex items-center gap-2 rounded bg-[#242424] px-3 py-2 text-xs font-medium text-[#aaa]"
               >
                 <FiCopy />
                 Copy
@@ -51,7 +51,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
 
           <button
             type="button"
-            className="ml-auto flex items-center gap-2 rounded bg-[#242424] px-4 py-3 text-sm font-semibold text-[#bbb]"
+            className=" cursor-pointer ml-auto flex items-center gap-2 rounded hover:bg-red-400 bg-red-500 px-4 py-2.5 text-sm font-semibold text-white"
           >
             <FiLogOut />
             Leave room
@@ -73,7 +73,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
           />
           <button
             type="submit"
-            className="flex h-14 items-center justify-center gap-2 rounded-sm bg-[#f4f4f5] px-5 font-semibold text-[#18181b] sm:px-8"
+            className="flex cursor-pointer h-14 items-center justify-center gap-2 rounded-sm bg-[#f4f4f5] px-5 font-semibold text-[#18181b] sm:px-8"
           >
             <FiSend />
             <span className="hidden sm:inline">Send</span>
