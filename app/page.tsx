@@ -1,6 +1,20 @@
+"use client";
+import { useEffect } from "react";
 import { FiMessageCircle } from "react-icons/fi";
+import { io } from "socket.io-client";
 
 export default function Home() {
+  useEffect(() => {
+    const socket = io("http://localhost:4000");
+
+    socket.on("connect", () => {
+      console.log(`Connected with ID: ${socket.id}`);
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-[#080808] px-4 text-white font-mono">
       <section className="w-full max-w-[700px] rounded-md border border-[#292929] p-7 sm:p-8">
