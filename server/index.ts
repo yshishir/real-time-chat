@@ -19,10 +19,12 @@ const PORT = 4000;
 io.on("connection", (socket) => {
   console.log(`User connected : ${socket.id}`);
 
-  socket.on("create-room", (callback) => {
+  socket.on("create-room", (name: string, callback) => {
     const roomCode = createRoomCode();
     socket.join(roomCode);
-    console.log(`Room created: ${roomCode}`);
+    socket.data.name = name;
+    socket.data.roomCode = roomCode;
+    console.log(`${name} created and joined room ${roomCode}`);
     console.log(`Socket ${socket.id} joined room ${roomCode}`);
     callback(roomCode);
   });

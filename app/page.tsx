@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiMessageCircle } from "react-icons/fi";
 import { io, Socket } from "socket.io-client";
 
 export default function Home() {
+  const [name, setName] = useState("");
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -21,7 +22,13 @@ export default function Home() {
   }, []);
 
   function handleCreateRoom() {
-    socketRef.current?.emit("create-room", (roomCode: string) => {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      console.log("Please enter your name");
+      return;
+    }
+    socketRef.current?.emit("create-room", trimmedName, (roomCode: string) => {
       console.log(`Created room: ${roomCode}`);
     });
   }
@@ -52,6 +59,8 @@ export default function Home() {
             placeholder="Enter your name"
             aria-label="Your name"
             className="h-[52px] w-full rounded-md border border-[#292929] bg-transparent px-4 text-base outline-none placeholder:text-[#929292]"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
           />
 
           <div className="flex flex-col gap-3 sm:flex-row">
