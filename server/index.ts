@@ -19,16 +19,16 @@ const PORT = 4000;
 io.on("connection", (socket) => {
   console.log(`User connected : ${socket.id}`);
 
+  socket.on("create-room", (callback) => {
+    const roomCode = createRoomCode();
+    socket.join(roomCode);
+    console.log(`Room created: ${roomCode}`);
+    console.log(`Socket ${socket.id} joined room ${roomCode}`);
+    callback(roomCode);
+  });
+
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
-
-    socket.on("create-room", () => {
-      const roomCode = createRoomCode();
-      socket.join(roomCode);
-
-      console.log(`Room created: ${roomCode}`);
-      console.log(`Socket ${socket.id} joined room ${roomCode}`);
-    });
   });
 });
 

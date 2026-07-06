@@ -1,19 +1,30 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { FiMessageCircle } from "react-icons/fi";
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 
 export default function Home() {
+  const socketRef = useRef<Socket | null>(null);
+
   useEffect(() => {
     const socket = io("http://localhost:4000");
+
+    socketRef.current = socket;
 
     socket.on("connect", () => {
       console.log(`Connected with ID: ${socket.id}`);
     });
     return () => {
       socket.disconnect();
+      socketRef.current = null;
     };
   }, []);
+
+  function handleCreateRoom() {
+    socketRef.current?.emit("create-room", (roomCode: string) => {
+      console.log(`Created room: ${roomCode}`);
+    });
+  }
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-[#080808] px-4 text-white font-mono">
@@ -31,6 +42,7 @@ export default function Home() {
           <button
             type="button"
             className="h-[60px] w-full rounded-md bg-[#f4f4f5] hover:bg-[#f4f4f5]/95 text-lg font-medium text-[#18181b] sm:text-xl cursor-pointer"
+            onClick={handleCreateRoom}
           >
             Create New Room
           </button>
