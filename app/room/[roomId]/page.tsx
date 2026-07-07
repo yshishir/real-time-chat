@@ -1,11 +1,37 @@
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { FiCopy, FiLogOut, FiSend, FiUsers } from "react-icons/fi";
+import { socket } from "@/lib/socket";
 
-type RoomPageProps = {
-  params: Promise<{ roomId: string }>;
-};
+export default function RoomPage() {
+  const { roomId } = useParams<{ roomId: string }>();
+  const router = useRouter();
 
-export default async function RoomPage({ params }: RoomPageProps) {
-  const { roomId } = await params;
+  useEffect(() => {
+    const name = sessionStorage.getItem("chatName");
+    const storedRoomCode = sessionStorage.getItem("roomCode");
+
+    if (!name || storedRoomCode !== roomId) {
+      router.replace("/");
+      return;
+    }
+
+    function handleConnect() {
+      console.log(`Room socket connected: ${socket.id}`);
+    }
+
+    socket.on("connect", handleConnect);
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    return () => {
+      socket.off("connect", handleConnect);
+    };
+  }, [roomId, router]);
 
   return (
     <main className="flex min-h-screen bg-[#080808] p-3 text-white sm:p-5">
