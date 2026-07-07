@@ -106,6 +106,19 @@ export default function RoomPage() {
     );
   }
 
+  function handleLeaveRoom() {
+    socket.emit("leave-room", (response: { success: boolean }) => {
+      if (!response.success) {
+        return;
+      }
+
+      sessionStorage.removeItem("chatName");
+      sessionStorage.removeItem("roomCode");
+
+      router.push("/");
+    });
+  }
+
   return (
     <main className="flex min-h-screen bg-[#080808] p-3 text-white sm:p-5">
       <section className="flex min-h-[calc(100vh-24px)] w-full flex-col rounded-md border border-[#292929] bg-[#0b0b0b] sm:min-h-[calc(100vh-40px)]">
@@ -151,6 +164,7 @@ export default function RoomPage() {
           <button
             type="button"
             className=" cursor-pointer ml-auto flex items-center gap-2 rounded hover:bg-red-400 bg-red-500 px-4 py-2.5 text-sm font-semibold text-white"
+            onClick={handleLeaveRoom}
           >
             <FiLogOut />
             Leave room

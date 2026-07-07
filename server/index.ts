@@ -99,6 +99,24 @@ io.on("connection", (socket) => {
     callback({ success: true });
   });
 
+  socket.on("leave-room", (callback) => {
+    const roomCode = socket.data.roomCode;
+
+    if (!roomCode) {
+      callback({ success: false });
+      return;
+    }
+
+    socket.leave(roomCode);
+
+    socket.data.roomCode = undefined;
+    socket.data.name = undefined;
+
+    emitRoomUsers(roomCode);
+
+    callback({ success: true });
+  });
+
   socket.on("disconnect", () => {
     const roomCode = socket.data.roomCode;
     if (roomCode) {
