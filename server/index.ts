@@ -6,6 +6,7 @@ const createRoomCode = customAlphabet(
   "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
   6,
 );
+const activeRooms = new Set<string>();
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -14,14 +15,27 @@ const io = new Server(httpServer, {
   },
 });
 
+function emitRoomUsers(roomCode: string) {
+  const userCount = io.sockets.adapter.rooms.get(roomCode)?.size ?? 0;
+
+  io.to(roomCode).emit("room-users", userCount);
+}
+
 const PORT = 4000;
 
 io.on("connection", (socket) => {
   console.log(`User connected : ${socket.id}`);
 
   socket.on("create-room", (name: string, callback) => {
-    const roomCode = createRoomCode();
+    let roomCode = createRoomCode();
+
+    while (activeRooms.has(roomCode)) {
+      roomCode = createRoomCode();
+    }
+
+    activeRooms.add(roomCode);
     socket.join(roomCode);
+    emitRoomUsers(roomCode);
     socket.data.name = name;
     socket.data.roomCode = roomCode;
     console.log(`${name} created and joined room ${roomCode}`);
@@ -31,7 +45,7 @@ io.on("connection", (socket) => {
 
   socket.on("join-room", (roomCode: string, name: string, callback) => {
     const normalizedRoomCode = roomCode.trim().toUpperCase();
-    const roomExist = io.sockets.adapter.rooms.has(normalizedRoomCode);
+    const roomExist = activeRooms.has(normalizedRoomCode);
 
     if (!roomExist) {
       callback({
@@ -41,6 +55,7 @@ io.on("connection", (socket) => {
       return;
     }
     socket.join(normalizedRoomCode);
+    emitRoomUsers(normalizedRoomCode);
     socket.data.name = name;
     socket.data.roomCode = normalizedRoomCode;
 
@@ -52,7 +67,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    const roomCode = socket.data.roomCode;
+    if (roomCode) {
+      emitRoomUsers(roomCode);
+    }
     console.log(`User disconnected: ${socket.id}`);
+  });
+  socket.on("get-room-users", (roomCode: string, callback) => {
+    const userCount = io.sockets.adapter.rooms.get(roomCode)?.size ?? 0;
+    callback(userCount);
   });
 });
 

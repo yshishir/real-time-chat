@@ -1,13 +1,20 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FiCopy, FiLogOut, FiSend, FiUsers } from "react-icons/fi";
 import { socket } from "@/lib/socket";
+
+type JoinRoomResponse = {
+  success: boolean;
+  roomCode?: string;
+  message?: string;
+};
 
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const router = useRouter();
+  const [onlineUsers, setOnlineUsers] = useState(1);
 
   useEffect(() => {
     const name = sessionStorage.getItem("chatName");
@@ -19,7 +26,28 @@ export default function RoomPage() {
     }
 
     function handleConnect() {
-      console.log(`Room socket connected: ${socket.id}`);
+      socket.emit("join-room", roomId, name, (response: JoinRoomResponse) => {
+        if (!response.success) {
+          sessionStorage.removeItem("chatName");
+          sessionStorage.removeItem("roomCode");
+          router.replace("/");
+          return;
+        }
+
+        console.log(`Rejoined room: ${response.roomCode}`);
+      });
+    }
+
+    function handleRoomUsers(userCount: number) {
+      setOnlineUsers(userCount);
+    }
+
+    socket.on("room-users", handleRoomUsers);
+
+    if (socket.connected) {
+      socket.emit("get-room-users", roomId, (userCount: number) => {
+        setOnlineUsers(userCount);
+      });
     }
 
     socket.on("connect", handleConnect);
@@ -29,6 +57,7 @@ export default function RoomPage() {
     }
 
     return () => {
+      socket.off("room-users", handleRoomUsers);
       socket.off("connect", handleConnect);
     };
   }, [roomId, router]);
@@ -71,7 +100,7 @@ export default function RoomPage() {
             </p>
             <p className="mt-1 flex items-center gap-2 font-mono text-lg font-semibold text-green-500">
               <FiUsers />
-              1/2
+              {onlineUsers}
             </p>
           </div>
 
