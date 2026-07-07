@@ -29,6 +29,28 @@ io.on("connection", (socket) => {
     callback(roomCode);
   });
 
+  socket.on("join-room", (roomCode: string, name: string, callback) => {
+    const normalizedRoomCode = roomCode.trim().toUpperCase();
+    const roomExist = io.sockets.adapter.rooms.has(normalizedRoomCode);
+
+    if (!roomExist) {
+      callback({
+        success: false,
+        message: "Room not found",
+      });
+      return;
+    }
+    socket.join(normalizedRoomCode);
+    socket.data.name = name;
+    socket.data.roomCode = normalizedRoomCode;
+
+    callback({
+      success: true,
+      roomCode: normalizedRoomCode,
+    });
+    console.log(`${name} joined room ${normalizedRoomCode}`);
+  });
+
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
   });
