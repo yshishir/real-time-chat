@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import { customAlphabet } from "nanoid";
+import { customAlphabet, nanoid } from "nanoid";
 
 const createRoomCode = customAlphabet(
   "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
@@ -64,6 +64,39 @@ io.on("connection", (socket) => {
       roomCode: normalizedRoomCode,
     });
     console.log(`${name} joined room ${normalizedRoomCode}`);
+  });
+
+  socket.on("send-message", (text: string, callback) => {
+    const messageText = text.trim();
+    const roomCode = socket.data.roomCode;
+    const name = socket.data.name;
+
+    if (!messageText || !roomCode || !name) {
+      callback({
+        success: false,
+        message: "Unable to send message",
+      });
+      return;
+    }
+
+    if (!socket.rooms.has(roomCode)) {
+      callback({
+        success: false,
+        message: "You are not in this room",
+      });
+      return;
+    }
+
+    const message = {
+      id: nanoid(),
+      text: messageText,
+      sender: name,
+      sentAt: new Date().toISOString(),
+    };
+
+    io.to(roomCode).emit("receive-message", message);
+
+    callback({ success: true });
   });
 
   socket.on("disconnect", () => {
