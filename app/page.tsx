@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { FiMessageCircle } from "react-icons/fi";
-import { io, Socket } from "socket.io-client";
+import { socket } from "@/lib/socket";
+import { useRouter } from "next/navigation";
 
 type JoinRoomResponse = {
   success: boolean;
@@ -12,19 +13,18 @@ type JoinRoomResponse = {
 export default function Home() {
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
-  const socketRef = useRef<Socket | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    const socket = io("http://localhost:4000");
-
-    socketRef.current = socket;
-
-    socket.on("connect", () => {
+    function handleConnect() {
       console.log(`Connected with ID: ${socket.id}`);
-    });
+    }
+
+    socket.on("connect", handleConnect);
+    socket.connect();
+
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      socket.off("connect", handleConnect);
     };
   }, []);
 
@@ -35,8 +35,10 @@ export default function Home() {
       console.log("Please enter your name");
       return;
     }
-    socketRef.current?.emit("create-room", trimmedName, (roomCode: string) => {
-      console.log(`Created room: ${roomCode}`);
+    socket.emit("create-room", trimmedName, (roomCode: string) => {
+      sessionStorage.setItem("chatName", trimmedName);
+      sessionStorage.setItem("roomCode", roomCode);
+      router.push(`/room/${roomCode}`);
     });
   }
 
@@ -48,7 +50,7 @@ export default function Home() {
       console.log("Name and room code are required");
       return;
     }
-    socketRef.current?.emit(
+    socket.emit(
       "join-room",
       normalizedRoomCode,
       trimmedName,
@@ -57,7 +59,9 @@ export default function Home() {
           console.log(response.message);
           return;
         }
-        console.log(`Joined room: ${response.roomCode}`);
+        sessionStorage.setItem("chatName", trimmedName);
+        sessionStorage.setItem("roomCode", response.roomCode!);
+        router.push(`/room/${response.roomCode}`);
       },
     );
   }
