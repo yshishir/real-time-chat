@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { FiCopy, FiLogOut, FiSend, FiUsers } from "react-icons/fi";
 import { socket } from "@/lib/socket";
 
@@ -11,10 +11,24 @@ type JoinRoomResponse = {
   message?: string;
 };
 
+type ChatMessage = {
+  id: string;
+  text: string;
+  sender: string;
+  sentAt: string;
+};
+
+type SendMessageResponse = {
+  success: boolean;
+  message?: string;
+};
+
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const router = useRouter();
   const [onlineUsers, setOnlineUsers] = useState(1);
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
     const name = sessionStorage.getItem("chatName");
@@ -42,6 +56,12 @@ export default function RoomPage() {
       setOnlineUsers(userCount);
     }
 
+    function handleReceiveMessage(newMessage: ChatMessage) {
+      setMessages((currentMessages) => [...currentMessages, newMessage]);
+    }
+
+    socket.on("receive-message", handleReceiveMessage);
+
     socket.on("room-users", handleRoomUsers);
 
     if (socket.connected) {
@@ -59,8 +79,32 @@ export default function RoomPage() {
     return () => {
       socket.off("room-users", handleRoomUsers);
       socket.off("connect", handleConnect);
+      socket.off("receive-message", handleReceiveMessage);
     };
   }, [roomId, router]);
+
+  function handleSendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedMessage = message.trim();
+
+    if (!trimmedMessage) {
+      return;
+    }
+
+    socket.emit(
+      "send-message",
+      trimmedMessage,
+      (response: SendMessageResponse) => {
+        if (!response.success) {
+          console.log(response.message);
+          return;
+        }
+
+        setMessage("");
+      },
+    );
+  }
 
   return (
     <main className="flex min-h-screen bg-[#080808] p-3 text-white sm:p-5">
@@ -114,17 +158,30 @@ export default function RoomPage() {
         </header>
 
         <div className="flex-1 overflow-y-auto p-5 sm:p-7">
-          <p className="font-mono text-sm text-[#555]">
-            Messages will appear here...
-          </p>
+          {messages.length === 0 ? (
+            <p className="font-mono text-sm text-[#555]">
+              Messages will appear here...
+            </p>
+          ) : (
+            messages.map((chatMessage) => (
+              <p key={chatMessage.id} className="font-mono text-sm">
+                {chatMessage.sender}: {chatMessage.text}
+              </p>
+            ))
+          )}
         </div>
 
-        <form className="flex gap-3 border-t border-[#242424] p-4 sm:p-5">
+        <form
+          className="flex gap-3 border-t border-[#242424] p-4 sm:p-5"
+          onSubmit={handleSendMessage}
+        >
           <input
             type="text"
             aria-label="Message"
             placeholder="Type a message..."
             className="h-14 min-w-0 flex-1 rounded-sm border border-[#292929] bg-[#050505] px-5 font-mono text-sm outline-none placeholder:text-[#555]"
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
           />
           <button
             type="submit"
