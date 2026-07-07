@@ -3,8 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import { FiMessageCircle } from "react-icons/fi";
 import { io, Socket } from "socket.io-client";
 
+type JoinRoomResponse = {
+  success: boolean;
+  roomCode?: string;
+  message?: string;
+};
+
 export default function Home() {
   const [name, setName] = useState("");
+  const [roomCode, setRoomCode] = useState("");
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -33,6 +40,27 @@ export default function Home() {
     });
   }
 
+  function handleJoinRoom() {
+    const trimmedName = name.trim();
+    const normalizedRoomCode = roomCode.trim().toUpperCase();
+
+    if (!trimmedName || !normalizedRoomCode) {
+      console.log("Name and room code are required");
+      return;
+    }
+    socketRef.current?.emit(
+      "join-room",
+      normalizedRoomCode,
+      trimmedName,
+      (response: JoinRoomResponse) => {
+        if (!response.success) {
+          console.log(response.message);
+          return;
+        }
+        console.log(`Joined room: ${response.roomCode}`);
+      },
+    );
+  }
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-[#080808] px-4 text-white font-mono">
       <section className="w-full max-w-[700px] rounded-md border border-[#292929] p-7 sm:p-8">
@@ -69,10 +97,13 @@ export default function Home() {
               placeholder="Enter Room Code"
               aria-label="Room code"
               className="h-[52px] min-w-0 flex-1 rounded-md border border-[#292929] bg-transparent px-4 text-base outline-none placeholder:text-[#929292]"
+              value={roomCode}
+              onChange={(event) => setRoomCode(event.target.value)}
             />
             <button
               type="button"
               className="h-[52px] rounded-md bg-[#f4f4f5] hover:bg-[#f4f4f5]/95 px-10 text-base font-medium text-[#18181b] cursor-pointer"
+              onClick={handleJoinRoom}
             >
               Join Room
             </button>
