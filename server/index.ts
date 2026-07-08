@@ -12,7 +12,7 @@ type ChatRoom = {
 };
 
 const activeRooms = new Map<string, ChatRoom>();
-const ROOM_DURATION_MS = 10 * 60 * 1000;
+const ROOM_DURATION_MS = 15 * 60 * 1000;
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
