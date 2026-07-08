@@ -6,7 +6,13 @@ const createRoomCode = customAlphabet(
   "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
   6,
 );
-const activeRooms = new Set<string>();
+type ChatRoom = {
+  expiresAt: number;
+  expirationTimer: ReturnType<typeof setTimeout>;
+};
+
+const activeRooms = new Map<string, ChatRoom>();
+const ROOM_DURATION_MS = 10 * 60 * 1000;
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -15,10 +21,36 @@ const io = new Server(httpServer, {
   },
 });
 
+const roomDeletionTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 function emitRoomUsers(roomCode: string) {
   const userCount = io.sockets.adapter.rooms.get(roomCode)?.size ?? 0;
 
   io.to(roomCode).emit("room-users", userCount);
+}
+
+function scheduleRoomDeletion(roomCode: string) {
+  const existingTimer = roomDeletionTimers.get(roomCode);
+
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+
+  const timer = setTimeout(() => {
+    const userCount = io.sockets.adapter.rooms.get(roomCode)?.size ?? 0;
+
+    if (userCount === 0) {
+      const room = activeRooms.get(roomCode);
+
+      if (room) {
+        clearTimeout(room.expirationTimer);
+        activeRooms.delete(roomCode);
+      }
+      console.log(`Room Deleted: ${roomCode}`);
+    }
+    roomDeletionTimers.delete(roomCode);
+  }, 5000);
+  roomDeletionTimers.set(roomCode, timer);
 }
 
 const PORT = 4000;
@@ -33,7 +65,7 @@ io.on("connection", (socket) => {
       roomCode = createRoomCode();
     }
 
-    activeRooms.add(roomCode);
+    registerRoom(roomCode);
     socket.join(roomCode);
     emitRoomUsers(roomCode);
     socket.data.name = name;
@@ -108,6 +140,7 @@ io.on("connection", (socket) => {
     }
 
     socket.leave(roomCode);
+    scheduleRoomDeletion(roomCode);
 
     socket.data.roomCode = undefined;
     socket.data.name = undefined;
@@ -116,11 +149,27 @@ io.on("connection", (socket) => {
 
     callback({ success: true });
   });
+  socket.on("get-room-expiration", (roomCode: string, callback) => {
+    const room = activeRooms.get(roomCode);
 
+    if (!room) {
+      callback({
+        success: false,
+        message: "Room not found",
+      });
+      return;
+    }
+
+    callback({
+      success: true,
+      expiresAt: room.expiresAt,
+    });
+  });
   socket.on("disconnect", () => {
     const roomCode = socket.data.roomCode;
     if (roomCode) {
       emitRoomUsers(roomCode);
+      scheduleRoomDeletion(roomCode);
     }
     console.log(`User disconnected: ${socket.id}`);
   });
@@ -129,6 +178,32 @@ io.on("connection", (socket) => {
     callback(userCount);
   });
 });
+
+function registerRoom(roomCode: string) {
+  const expiresAt = Date.now() + ROOM_DURATION_MS;
+
+  const expirationTimer = setTimeout(async () => {
+    io.to(roomCode).emit("room-expired");
+
+    const roomSockets = await io.in(roomCode).fetchSockets();
+
+    for (const roomSocket of roomSockets) {
+      roomSocket.data.name = undefined;
+      roomSocket.data.roomCode = undefined;
+      roomSocket.leave(roomCode);
+    }
+
+    activeRooms.delete(roomCode);
+    roomDeletionTimers.delete(roomCode);
+
+    console.log(`Room expired: ${roomCode}`);
+  }, ROOM_DURATION_MS);
+
+  activeRooms.set(roomCode, {
+    expiresAt,
+    expirationTimer,
+  });
+}
 
 httpServer.listen(PORT, () => {
   console.log(`Socket.IO server running on http://localhost:${PORT}`);

@@ -23,16 +23,24 @@ type SendMessageResponse = {
   message?: string;
 };
 
+type RoomExpirationResponse = {
+  success: boolean;
+  expiresAt?: number;
+  message?: string;
+};
+
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const router = useRouter();
   const [onlineUsers, setOnlineUsers] = useState(1);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [timeRemaining, setTimeRemaining] = useState(600);
 
   useEffect(() => {
     const name = sessionStorage.getItem("chatName");
     const storedRoomCode = sessionStorage.getItem("roomCode");
+    let countdownInterval: ReturnType<typeof setInterval> | undefined;
 
     if (!name || storedRoomCode !== roomId) {
       router.replace("/");
@@ -44,6 +52,7 @@ export default function RoomPage() {
         if (!response.success) {
           sessionStorage.removeItem("chatName");
           sessionStorage.removeItem("roomCode");
+          requestRoomExpiration();
           router.replace("/");
           return;
         }
@@ -52,6 +61,44 @@ export default function RoomPage() {
       });
     }
 
+    function startCountdown(expiresAt: number) {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
+
+      function updateCountdown() {
+        const secondsRemaining = Math.max(
+          0,
+          Math.ceil((expiresAt - Date.now()) / 1000),
+        );
+
+        setTimeRemaining(secondsRemaining);
+      }
+
+      updateCountdown();
+      countdownInterval = setInterval(updateCountdown, 1000);
+    }
+
+    function requestRoomExpiration() {
+      socket.emit(
+        "get-room-expiration",
+        roomId,
+        (response: RoomExpirationResponse) => {
+          if (!response.success || !response.expiresAt) {
+            router.replace("/");
+            return;
+          }
+
+          startCountdown(response.expiresAt);
+        },
+      );
+    }
+
+    function handleRoomExpired() {
+      sessionStorage.removeItem("chatName");
+      sessionStorage.removeItem("roomCode");
+      router.replace("/");
+    }
     function handleRoomUsers(userCount: number) {
       setOnlineUsers(userCount);
     }
@@ -65,12 +112,14 @@ export default function RoomPage() {
     socket.on("room-users", handleRoomUsers);
 
     if (socket.connected) {
+      requestRoomExpiration();
       socket.emit("get-room-users", roomId, (userCount: number) => {
         setOnlineUsers(userCount);
       });
     }
 
     socket.on("connect", handleConnect);
+    socket.on("room-expired", handleRoomExpired);
 
     if (!socket.connected) {
       socket.connect();
@@ -80,6 +129,11 @@ export default function RoomPage() {
       socket.off("room-users", handleRoomUsers);
       socket.off("connect", handleConnect);
       socket.off("receive-message", handleReceiveMessage);
+      socket.off("room-expired", handleRoomExpired);
+
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
     };
   }, [roomId, router]);
 
@@ -118,6 +172,8 @@ export default function RoomPage() {
       router.push("/");
     });
   }
+  const minutes = Math.floor(timeRemaining / 60);
+  const seconds = String(timeRemaining % 60).padStart(2, "0");
 
   return (
     <main className="flex min-h-screen bg-[#080808] p-3 text-white sm:p-5">
@@ -147,7 +203,7 @@ export default function RoomPage() {
               Time remaining
             </p>
             <p className="mt-1 font-mono text-lg font-semibold text-rose-500">
-              10:00
+              {minutes}:{seconds}
             </p>
           </div>
 
