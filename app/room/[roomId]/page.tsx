@@ -36,6 +36,7 @@ export default function RoomPage() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [timeRemaining, setTimeRemaining] = useState(600);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const name = sessionStorage.getItem("chatName");
@@ -52,12 +53,12 @@ export default function RoomPage() {
         if (!response.success) {
           sessionStorage.removeItem("chatName");
           sessionStorage.removeItem("roomCode");
-          requestRoomExpiration();
           router.replace("/");
           return;
         }
 
         console.log(`Rejoined room: ${response.roomCode}`);
+        requestRoomExpiration();
       });
     }
 
@@ -97,6 +98,7 @@ export default function RoomPage() {
     function handleRoomExpired() {
       sessionStorage.removeItem("chatName");
       sessionStorage.removeItem("roomCode");
+      sessionStorage.setItem("roomClosed", "true");
       router.replace("/");
     }
     function handleRoomUsers(userCount: number) {
@@ -172,6 +174,12 @@ export default function RoomPage() {
       router.push("/");
     });
   }
+  async function handleCopyRoomCode() {
+    await navigator.clipboard.writeText(roomId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
   const minutes = Math.floor(timeRemaining / 60);
   const seconds = String(timeRemaining % 60).padStart(2, "0");
 
@@ -191,9 +199,10 @@ export default function RoomPage() {
                 type="button"
                 aria-label="Copy room code"
                 className=" cursor-pointer flex items-center gap-2 rounded bg-[#242424] px-3 py-2 text-xs font-medium text-[#aaa]"
+                onClick={handleCopyRoomCode}
               >
                 <FiCopy />
-                Copy
+                {copied ? "Copied" : "Copy"}
               </button>
             </div>
           </div>
@@ -234,9 +243,13 @@ export default function RoomPage() {
             </p>
           ) : (
             messages.map((chatMessage) => (
-              <p key={chatMessage.id} className="font-mono text-sm">
-                {chatMessage.sender}: {chatMessage.text}
-              </p>
+              <div key={chatMessage.id} className="mb-3 max-w-[75%] rounded-md bg-[#242424] px-4 py-3 font-mono text-sm">
+                <p className="mb-1 text-xs text-[#aaa]">{chatMessage.sender}</p>
+                <p className="break-words">{chatMessage.text}</p>
+                <p className="mt-1 text-right text-[10px] text-[#777]">
+                  {new Date(chatMessage.sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
             ))
           )}
         </div>

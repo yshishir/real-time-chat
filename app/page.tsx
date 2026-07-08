@@ -13,9 +13,19 @@ type JoinRoomResponse = {
 export default function Home() {
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const router = useRouter();
 
   useEffect(() => {
+    let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+
+    if (sessionStorage.getItem("roomClosed")) {
+      sessionStorage.removeItem("roomClosed");
+      noticeTimer = setTimeout(() => {
+        setNotice("Room closed because the timer ended");
+      }, 0);
+    }
     function handleConnect() {
       console.log(`Connected with ID: ${socket.id}`);
     }
@@ -25,6 +35,7 @@ export default function Home() {
 
     return () => {
       socket.off("connect", handleConnect);
+      if (noticeTimer) clearTimeout(noticeTimer);
     };
   }, []);
 
@@ -32,7 +43,7 @@ export default function Home() {
     const trimmedName = name.trim();
 
     if (!trimmedName) {
-      console.log("Please enter your name");
+      setError("Enter your name");
       return;
     }
     socket.emit("create-room", trimmedName, (roomCode: string) => {
@@ -47,7 +58,7 @@ export default function Home() {
     const normalizedRoomCode = roomCode.trim().toUpperCase();
 
     if (!trimmedName || !normalizedRoomCode) {
-      console.log("Name and room code are required");
+      setError(!trimmedName ? "Enter your name" : "Enter a room code");
       return;
     }
     socket.emit(
@@ -56,7 +67,7 @@ export default function Home() {
       trimmedName,
       (response: JoinRoomResponse) => {
         if (!response.success) {
-          console.log(response.message);
+          setError(response.message ?? "Unable to join room");
           return;
         }
         sessionStorage.setItem("chatName", trimmedName);
@@ -74,8 +85,10 @@ export default function Home() {
         </div>
 
         <p className="mt-1 text-sm text-[#9f9f9f] sm:text-base">
-          temporary chat room that expires after all users exit
+          temporary chat room that expires after 10 minutes or when everyone leaves
         </p>
+
+        {notice && <p className="mt-3 text-sm text-red-500">{notice}</p>}
 
         <div className="mt-8 space-y-5">
           <button
@@ -94,6 +107,8 @@ export default function Home() {
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <input
