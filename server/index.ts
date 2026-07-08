@@ -17,7 +17,7 @@ const ROOM_DURATION_MS = 10 * 60 * 1000;
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
   },
 });
 
@@ -53,7 +53,7 @@ function scheduleRoomDeletion(roomCode: string) {
   roomDeletionTimers.set(roomCode, timer);
 }
 
-const PORT = 4000;
+const PORT = Number(process.env.PORT) || 4000;
 
 io.on("connection", (socket) => {
   console.log(`User connected : ${socket.id}`);
