@@ -85,7 +85,7 @@ export default function Home() {
         </div>
 
         <p className="mt-1 text-sm text-[#9f9f9f] sm:text-base">
-          temporary chat room that expires after 15 minutes or when everyone leaves
+          temporary chat room that expires after 10 minutes or when everyone leaves
         </p>
 
         {notice && <p className="mt-3 text-sm text-red-500">{notice}</p>}

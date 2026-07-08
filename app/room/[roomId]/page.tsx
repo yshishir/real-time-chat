@@ -4,7 +4,6 @@ import { useParams, useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { FiCopy, FiLogOut, FiSend, FiUsers } from "react-icons/fi";
 import { socket } from "@/lib/socket";
-import toast from "react-hot-toast";
 
 type JoinRoomResponse = {
   success: boolean;
@@ -178,7 +177,6 @@ export default function RoomPage() {
   async function handleCopyRoomCode() {
     await navigator.clipboard.writeText(roomId);
     setCopied(true);
-    toast.success("Copied to Clipboard");
   }
 
   const minutes = Math.floor(timeRemaining / 60);
@@ -246,10 +244,10 @@ export default function RoomPage() {
             messages.map((chatMessage) => (
               <div
                 key={chatMessage.id}
-                className="mb-3 max-w-[75%] rounded-md bg-[#242424] px-4 py-3 font-mono text-sm"
+                className="mb-3 max-w-[75%] rounded-md bg-[#242424] px-4 py-2.5 font-mono text-sm"
               >
                 <p className="mb-1 text-xs text-[#aaa]">{chatMessage.sender}</p>
-                <p className="break-words">{chatMessage.text}</p>
+                <p className="wrap-break-word">{chatMessage.text}</p>
                 <p className="mt-1 text-right text-[10px] text-[#777]">
                   {new Date(chatMessage.sentAt).toLocaleTimeString([], {
                     hour: "2-digit",
