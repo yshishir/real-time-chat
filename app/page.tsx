@@ -15,6 +15,8 @@ export default function Home() {
   const [roomCode, setRoomCode] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -46,6 +48,9 @@ export default function Home() {
       setError("Enter your name");
       return;
     }
+    setError("");
+    setIsCreatingRoom(true);
+
     socket.emit("create-room", trimmedName, (roomCode: string) => {
       sessionStorage.setItem("chatName", trimmedName);
       sessionStorage.setItem("roomCode", roomCode);
@@ -61,12 +66,16 @@ export default function Home() {
       setError(!trimmedName ? "Enter your name" : "Enter a room code");
       return;
     }
+
+    setError("");
+    setIsJoiningRoom(true);
     socket.emit(
       "join-room",
       normalizedRoomCode,
       trimmedName,
       (response: JoinRoomResponse) => {
         if (!response.success) {
+          setIsJoiningRoom(false);
           setError(response.message ?? "Unable to join room");
           return;
         }
@@ -85,7 +94,8 @@ export default function Home() {
         </div>
 
         <p className="mt-1 text-sm text-[#9f9f9f] sm:text-base">
-          temporary chat room that expires after 10 minutes or when everyone leaves
+          temporary chat room that expires after 10 minutes or when everyone
+          leaves
         </p>
 
         {notice && <p className="mt-3 text-sm text-red-500">{notice}</p>}
@@ -95,8 +105,9 @@ export default function Home() {
             type="button"
             className="h-[60px] w-full rounded-md bg-[#f4f4f5] hover:bg-[#f4f4f5]/95 text-lg font-medium text-[#18181b] sm:text-xl cursor-pointer"
             onClick={handleCreateRoom}
+            disabled={isCreatingRoom}
           >
-            Create New Room
+            {isCreatingRoom ? "Creating..." : "Create New Room"}
           </button>
 
           <input
@@ -123,8 +134,9 @@ export default function Home() {
               type="button"
               className="h-[52px] rounded-md bg-[#f4f4f5] hover:bg-[#f4f4f5]/95 px-10 text-base font-medium text-[#18181b] cursor-pointer"
               onClick={handleJoinRoom}
+              disabled={isJoiningRoom}
             >
-              Join Room
+              {isJoiningRoom ? "Joining..." : "Join Room"}
             </button>
           </div>
         </div>
