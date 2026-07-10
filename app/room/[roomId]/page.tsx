@@ -227,7 +227,7 @@ export default function RoomPage() {
 
           <button
             type="button"
-            className=" cursor-pointer ml-auto flex items-center gap-2 rounded hover:bg-red-400 bg-red-500 px-4 py-2.5 text-sm font-semibold text-white"
+            className=" cursor-pointer flex items-center gap-2 rounded hover:bg-red-400 bg-red-500 px-4 py-2.5 text-sm font-semibold text-white"
             onClick={handleLeaveRoom}
           >
             <FiLogOut />
@@ -244,7 +244,7 @@ export default function RoomPage() {
             messages.map((chatMessage) => (
               <div
                 key={chatMessage.id}
-                className="mb-3 max-w-[75%] rounded-md bg-[#242424] px-4 py-2.5 font-mono text-sm"
+                className="mb-3 max-w-[75%] rounded-md bg-[#242424] px-4 py-1.5 font-mono text-sm"
               >
                 <p className="mb-1 text-xs text-[#aaa]">{chatMessage.sender}</p>
                 <p className="wrap-break-word">{chatMessage.text}</p>
